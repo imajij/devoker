@@ -1,7 +1,7 @@
 backend:
   image:
     repository: ghcr.io/imajij/devoker-backend
-    tag: daef131156917fe6e93e50ee94229e9d014781ed
+    tag: cf2637786e874edafe37c2ef83e3265205e9ceb8
   replicas: 2 # safe: all game state is in Postgres, so any replica can serve any player
   resources:
     requests: {cpu: 50m, memory: 128Mi}
@@ -9,7 +9,7 @@ backend:
 frontend:
   image:
     repository: ghcr.io/imajij/devoker-frontend
-    tag: daef131156917fe6e93e50ee94229e9d014781ed
+    tag: cf2637786e874edafe37c2ef83e3265205e9ceb8
   resources:
     requests: {cpu: 20m, memory: 32Mi}
     limits: {cpu: 200m, memory: 128Mi}

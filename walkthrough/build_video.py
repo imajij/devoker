@@ -222,12 +222,21 @@ def scenes() -> list[dict]:
         "Any fixable high or critical vulnerability stops the release. Images that pass are pushed to the GitHub container registry, tagged with the commit SHA, "
         "and a bot commits that tag into the Helm values file.")
 
+    add("7 · CI/CD + DevSecOps", head("7 · CI/CD + DevSecOps", "The pipeline, green on imajij/devoker") +
+        img(SHOTS / "13-pipeline-green.png", SHOTS / "14-ghcr-backend.png",
+            cap="All 8 jobs passed in 4 min 12 s; the multi-arch image is public on ghcr.io/imajij, tagged by commit SHA"),
+        "Here's a real run on my fork of the repository, for the commit that pointed the pipeline at my own registry. "
+        "Tests, static analysis, dependency scanning and the secrets scan all pass, both images build and clear the Trivy gate, "
+        "and the deploy job commits the new tag. On the right is the published backend image on the GitHub container registry, "
+        "tagged with the full commit SHA, for amd64 and arm64.")
+
     add("8 · GitOps", head("8 · GitOps with Argo CD", "Git is the source of truth") +
-        img(SHOTS / "09-argocd.png", cap="Argo CD application 'devoker': Synced and Healthy, tracking helm/devoker on main"),
+        img(SHOTS / "09-argocd.png", cap="Argo CD application 'devoker': Synced and Healthy at the bot's deploy commit on imajij/devoker"),
         "That commit is where GitOps takes over. Argo CD runs inside the cluster and watches the Helm chart in the repository. "
         "When the image tag changes, it renders the chart and syncs the cluster to match. "
         "Self-heal is on, so a manual kubectl edit gets reverted, and prune removes anything that git no longer contains. "
-        "Here it is on this cluster, synced and healthy, pulling the published images straight from the registry.")
+        "Here it's tracking my repository, synced and healthy at the bot's deploy commit, running the images the pipeline just built, "
+        "including the bug fix you'll see in a moment.")
 
     add("9 · Monitoring", head("9 · Monitoring", "Prometheus scrapes the backend; Grafana shows it") +
         img(SHOTS / "10-prometheus-targets.png", SHOTS / "11-grafana.png", cap="ServiceMonitor targets UP, and the Devoker Grafana dashboard"),
@@ -248,6 +257,15 @@ def scenes() -> list[dict]:
         "After the fix, the same burst leaves no connections stuck, readiness answers in ten milliseconds, and twenty-five out of twenty-five games succeed. "
         "I added a regression test that fails on the old code.")
 
+    add("10 · A real bug", head("10 · Shipped through the pipeline", "Same burst, after the fix went out via GitOps") +
+        "<div class='body'><div class='col' style='flex:1.3'>" + img(SHOTS / "17-grafana-after-fix.png") +
+        "<div class='cap'>23:27 old image: p95 pinned at 1 s, 15 stuck streams · 23:50 fixed image: 10 hands/min, flat latency, no stuck streams</div></div>"
+        "<div class='col'>" + term(proof("16-gitops-after-fix.txt"), 12) + "</div></div>",
+        "The fix then went out the proper way: pushed to git, through the full pipeline, into the registry, and deployed by Argo CD. "
+        "On the dashboard, the burst at twenty-three twenty-seven ran on the old image: latency stuck at a second and fifteen streams that never let go. "
+        "The burst at twenty-three fifty ran on the fixed image from the pipeline: ten hands a minute, flat latency, and streams that close as soon as players leave. "
+        "Twenty-five out of twenty-five games succeeded, with zero readiness probe failures.")
+
     add("11 · Terraform", head("11 · Terraform", "The AWS side, as code") +
         "<div class='body'><div class='col'>" + bullets([
             "<b>VPC</b> 10.0.0.0/16 with two public subnets in two AZs, no NAT gateway to save cost",
@@ -266,11 +284,11 @@ def scenes() -> list[dict]:
             "<b>Security gates are real</b>: scans caught a predictable shuffle, old dependencies, a writable filesystem",
             "<b>Load-test what you monitor</b>: the dashboard exposed a connection-pool leak in the event streams, now fixed",
             "<b>GitOps removes drift</b>: self-heal undoes manual changes",
-            "Verified locally: <b>36/36 tests</b>, Compose, Helm on minikube, Argo CD synced, Prometheus + Grafana",
+            "Verified: <b>36/36 tests</b>, CI 8/8 green, Compose, Helm, Argo CD synced from imajij/devoker, Prometheus + Grafana",
         ]),
         "To wrap up. The biggest lesson is that the application's state model decides how it can be deployed: moving rooms into Postgres is what made two replicas and zero-downtime rolling updates possible. "
         "The security scans found real problems, and load testing against the dashboards found one more, which is now fixed and covered by a test. "
-        "Everything you've seen here was run on this machine: the tests, Docker Compose, the Helm chart on minikube, Argo CD, and the monitoring stack. Thanks for watching.")
+        "Everything you have seen here really ran: the tests, a green pipeline on GitHub, Docker Compose, the Helm chart on minikube, Argo CD deploying from git, and the monitoring stack. Thanks for watching.")
     return S
 
 

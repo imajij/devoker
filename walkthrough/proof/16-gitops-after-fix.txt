@@ -1,0 +1,11 @@
+$ # pipeline: 8/8 jobs green, run 38945564176
+$ # bot commit 0c8a7de -> Argo CD sync
+$ kubectl -n argocd get app devoker
+SYNC     HEALTH    REVISION
+Synced   Healthy   0c8a7de
+repo: github.com/imajij/devoker
+
+$ # 25 concurrent + 25 sequential games
+$ # via the Ingress, fixed image cf26377
+sequential after burst: 25/25 ok
+readiness probe timeouts: 0

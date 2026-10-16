@@ -207,105 +207,133 @@ Any fixable high or critical vulnerability stops the release.
 Images that pass are pushed to the GitHub container registry, tagged with the commit SHA, and a bot commits that tag into the Helm values file.
 
 53
-00:05:16,004 --> 00:05:18,266
-That commit is where GitOps takes over.
+00:05:16,004 --> 00:05:22,768
+Here's a real run on my fork of the repository, for the commit that pointed the pipeline at my own registry.
 
 54
-00:05:18,266 --> 00:05:22,731
-Argo CD runs inside the cluster and watches the Helm chart in the repository.
+00:05:22,768 --> 00:05:32,664
+Tests, static analysis, dependency scanning and the secrets scan all pass, both images build and clear the Trivy gate, and the deploy job commits the new tag.
 
 55
-00:05:22,731 --> 00:05:27,370
-When the image tag changes, it renders the chart and syncs the cluster to match.
+00:05:32,664 --> 00:05:40,868
+On the right is the published backend image on the GitHub container registry, tagged with the full commit SHA, for amd64 and arm64.
 
 56
-00:05:27,370 --> 00:05:33,865
-Self-heal is on, so a manual kubectl edit gets reverted, and prune removes anything that git no longer contains.
+00:05:41,568 --> 00:05:43,833
+That commit is where GitOps takes over.
 
 57
-00:05:33,865 --> 00:05:39,896
-Here it is on this cluster, synced and healthy, pulling the published images straight from the registry.
+00:05:43,833 --> 00:05:48,305
+Argo CD runs inside the cluster and watches the Helm chart in the repository.
 
 58
-00:05:40,596 --> 00:05:49,530
-For observability, the backend exposes Prometheus metrics: request rates and latencies, plus custom metrics for hands played and open event streams.
+00:05:48,305 --> 00:05:52,950
+When the image tag changes, it renders the chart and syncs the cluster to match.
 
 59
-00:05:49,530 --> 00:05:58,041
-The kube Prometheus stack is installed with Helm, and a ServiceMonitor in the Devoker chart tells Prometheus to scrape both backend replicas.
+00:05:52,950 --> 00:05:59,454
+Self-heal is on, so a manual kubectl edit gets reverted, and prune removes anything that git no longer contains.
 
 60
-00:05:58,041 --> 00:06:06,975
-The chart also ships a Grafana dashboard, and two alert rules: one for backend restarts, and one for the frontend autoscaler sitting at its maximum.
+00:05:59,454 --> 00:06:09,326
+Here it's tracking my repository, synced and healthy at the bot's deploy commit, running the images the pipeline just built, including the bug fix you'll see in a moment.
 
 61
-00:06:07,675 --> 00:06:09,459
-Monitoring paid off right away.
+00:06:10,026 --> 00:06:18,960
+For observability, the backend exposes Prometheus metrics: request rates and latencies, plus custom metrics for hands played and open event streams.
 
 62
-00:06:09,459 --> 00:06:16,366
-When I pushed a burst of twenty-five games through the Ingress, about a third of the requests failed with five oh three.
+00:06:18,960 --> 00:06:27,472
+The kube Prometheus stack is installed with Helm, and a ServiceMonitor in the Devoker chart tells Prometheus to scrape both backend replicas.
 
 63
-00:06:16,366 --> 00:06:22,179
-On the dashboard you can see why: p95 latency jumps to one second and fifteen event streams are open.
+00:06:27,472 --> 00:06:36,406
+The chart also ships a Grafana dashboard, and two alert rules: one for backend restarts, and one for the frontend autoscaler sitting at its maximum.
 
 64
-00:06:22,179 --> 00:06:24,481
-The cause was the event stream endpoint.
+00:06:37,106 --> 00:06:38,890
+Monitoring paid off right away.
 
 65
-00:06:24,481 --> 00:06:31,791
-It took its database session through FastAPI's dependency injection, and FastAPI keeps that session open until the stream ends.
+00:06:38,890 --> 00:06:45,797
+When I pushed a burst of twenty-five games through the Ingress, about a third of the requests failed with five oh three.
 
 66
-00:06:31,791 --> 00:06:35,935
-So every connected player held a pooled connection, idle in transaction.
+00:06:45,797 --> 00:06:51,610
+On the dashboard you can see why: p95 latency jumps to one second and fifteen event streams are open.
 
 67
-00:06:35,935 --> 00:06:47,849
-Fifteen streams used up the whole pool, the readiness check had to wait for a connection, its one second probe timed out, Kubernetes marked both backends unready, and the Ingress had nowhere to send traffic.
+00:06:51,610 --> 00:06:53,912
+The cause was the event stream endpoint.
 
 68
-00:06:47,849 --> 00:06:55,216
-The fix is small: the stream checks the player's token with its own short-lived session, just like the polling loop already did.
+00:06:53,912 --> 00:07:01,222
+It took its database session through FastAPI's dependency injection, and FastAPI keeps that session open until the stream ends.
 
 69
-00:06:55,216 --> 00:07:03,677
-After the fix, the same burst leaves no connections stuck, readiness answers in ten milliseconds, and twenty-five out of twenty-five games succeed.
+00:07:01,222 --> 00:07:05,366
+So every connected player held a pooled connection, idle in transaction.
 
 70
-00:07:03,677 --> 00:07:06,728
-I added a regression test that fails on the old code.
+00:07:05,366 --> 00:07:17,280
+Fifteen streams used up the whole pool, the readiness check had to wait for a connection, its one second probe timed out, Kubernetes marked both backends unready, and the Ingress had nowhere to send traffic.
 
 71
-00:07:07,428 --> 00:07:19,549
-Finally, Terraform describes the cloud side: a VPC with two public subnets, an EKS cluster with a small managed node group, E C R repositories with scan on push, and an encrypted S3 bucket.
+00:07:17,280 --> 00:07:24,647
+The fix is small: the stream checks the player's token with its own short-lived session, just like the polling loop already did.
 
 72
-00:07:19,549 --> 00:07:22,948
-The configuration formats cleanly and validates here.
+00:07:24,647 --> 00:07:33,108
+After the fix, the same burst leaves no connections stuck, readiness answers in ten milliseconds, and twenty-five out of twenty-five games succeed.
 
 73
-00:07:22,948 --> 00:07:33,145
-Applying it creates real, billable AWS resources, about fifteen cents an hour, so it's only planned and applied when needed, and destroyed in the same session.
+00:07:33,108 --> 00:07:36,158
+I added a regression test that fails on the old code.
 
 74
-00:07:33,845 --> 00:07:34,496
-To wrap up.
+00:07:36,858 --> 00:07:44,080
+The fix then went out the proper way: pushed to git, through the full pipeline, into the registry, and deployed by Argo CD.
 
 75
-00:07:34,496 --> 00:07:45,439
-The biggest lesson is that the application's state model decides how it can be deployed: moving rooms into Postgres is what made two replicas and zero-downtime rolling updates possible.
+00:07:44,080 --> 00:07:52,477
+On the dashboard, the burst at twenty-three twenty-seven ran on the old image: latency stuck at a second and fifteen streams that never let go.
 
 76
-00:07:45,439 --> 00:07:53,543
-The security scans found real problems, and load testing against the dashboards found one more, which is now fixed and covered by a test.
+00:07:52,477 --> 00:08:01,637
+The burst at twenty-three fifty ran on the fixed image from the pipeline: ten hands a minute, flat latency, and streams that close as soon as players leave.
 
 77
-00:07:53,543 --> 00:08:01,942
-Everything you've seen here was run on this machine: the tests, Docker Compose, the Helm chart on minikube, Argo CD, and the monitoring stack.
+00:08:01,637 --> 00:08:06,511
+Twenty-five out of twenty-five games succeeded, with zero readiness probe failures.
 
 78
-00:08:01,942 --> 00:08:03,125
+00:08:07,211 --> 00:08:19,332
+Finally, Terraform describes the cloud side: a VPC with two public subnets, an EKS cluster with a small managed node group, E C R repositories with scan on push, and an encrypted S3 bucket.
+
+79
+00:08:19,332 --> 00:08:22,731
+The configuration formats cleanly and validates here.
+
+80
+00:08:22,731 --> 00:08:32,928
+Applying it creates real, billable AWS resources, about fifteen cents an hour, so it's only planned and applied when needed, and destroyed in the same session.
+
+81
+00:08:33,628 --> 00:08:34,282
+To wrap up.
+
+82
+00:08:34,282 --> 00:08:45,276
+The biggest lesson is that the application's state model decides how it can be deployed: moving rooms into Postgres is what made two replicas and zero-downtime rolling updates possible.
+
+83
+00:08:45,276 --> 00:08:53,417
+The security scans found real problems, and load testing against the dashboards found one more, which is now fixed and covered by a test.
+
+84
+00:08:53,417 --> 00:09:03,995
+Everything you have seen here really ran: the tests, a green pipeline on GitHub, Docker Compose, the Helm chart on minikube, Argo CD deploying from git, and the monitoring stack.
+
+85
+00:09:03,995 --> 00:09:05,184
 Thanks for watching.

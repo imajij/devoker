@@ -9,6 +9,20 @@ GHCR. The pipeline then commits the new image tag to the Helm chart, and Argo CD
 cluster, deploys it. Prometheus scrapes the backend's `/metrics`, Grafana shows a Devoker dashboard,
 and the frontend scales on CPU. Terraform can stand up the same stack's AWS side: a VPC and an EKS cluster.
 
+## Walkthrough video and run proof
+
+- **Narrated explainer:** [demo/devoker-explained.mp4](demo/devoker-explained.mp4) (about 9 min, subtitles in
+  [demo/devoker-explained.srt](demo/devoker-explained.srt)). It covers the app, architecture, backend design, tests, Docker,
+  Kubernetes + Helm, CI/CD + DevSecOps, Argo CD, monitoring, a bug found under load, and Terraform.
+- **Proof:** [walkthrough/proof/](walkthrough/proof/) has screenshots and command output from the run on minikube: 36 tests passing,
+  Compose, both deployments (Argo CD and Helm), Prometheus targets, Grafana, a green pipeline and the GHCR image.
+- **Bug fixed:** the `/events` stream held a `Depends(get_db)` session for as long as it stayed open, so about 15 connected players
+  used up the connection pool. `/ready` then timed out, both backends went unready and the Ingress returned 503. The stream now
+  opens short-lived sessions only (`backend/app/main.py`), and a regression test covers it. Under a burst of 25 concurrent games,
+  through the Ingress: 25/25 OK and 0 probe timeouts.
+- The video is built from slides and narration by [walkthrough/build_video.py](walkthrough/build_video.py)
+  (headless Chrome + macOS `say` + ffmpeg).
+
 ## Contents
 
 [Where each requirement lives](#where-each-requirement-lives) · [Architecture](#architecture) · [Technologies](#technologies) · [Run the app](#run-the-app) ·

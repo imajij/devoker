@@ -105,3 +105,18 @@ def test_metrics_endpoint(client, table):
     body = client.get("/metrics").text
     assert "http_requests_total" in body
     assert "devoker_hands_played_total" in body
+
+
+def test_events_rejects_unknown_token_and_missing_room(table):
+    assert table.c.get(f"/api/rooms/{table.code}/events", params={"token": "nope"}).status_code == 403
+    assert table.c.get("/api/rooms/ZZZZZ/events", params={"token": "nope"}).status_code == 404
+
+
+def test_events_holds_no_request_scoped_db_session():
+    """A Depends(get_db) session would stay open (idle in transaction) for the whole stream and
+    exhaust the connection pool once enough players connect, which starves /ready."""
+    from app.db import get_db
+    from app.main import app
+
+    route = next(r for r in app.routes if getattr(r, "path", "") == "/api/rooms/{code}/events")
+    assert get_db not in [d.call for d in route.dependant.dependencies]

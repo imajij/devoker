@@ -196,12 +196,22 @@ def current_version(code: str) -> int | None:
         return db.scalar(select(RoomRow.version).where(RoomRow.code == code.upper()))
 
 
+def is_known(code: str, token: str) -> bool:
+    """404 if the room is gone, else whether this token belongs to it."""
+    with SessionLocal() as db:
+        _, room = rooms.load(db, code)
+        return room.known(token)
+
+
 @app.get("/api/rooms/{code}/events")
-async def events(code: str, token: str, request: Request, db: Session = Depends(get_db)) -> StreamingResponse:
+async def events(code: str, token: str, request: Request) -> StreamingResponse:
     """Streams the room as this token may see it every time it changes. The token is in the query
-    string because the browser's EventSource can't send headers."""
-    _, room = await run_in_threadpool(rooms.load, db, code)
-    if not room.known(token):
+    string because the browser's EventSource can't send headers.
+
+    No Depends(get_db) here: FastAPI would keep that session (and its pooled connection, idle in
+    transaction) open for the whole stream, and a few dozen players would exhaust the pool and
+    starve /ready. Every database touch below opens and closes its own short session."""
+    if not await run_in_threadpool(is_known, code, token):
         raise ApiError(403, "unknown player")
 
     async def stream():

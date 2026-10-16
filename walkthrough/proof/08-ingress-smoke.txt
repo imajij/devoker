@@ -1,0 +1,1 @@
+ok: room GGAGL played a hand, winner p2

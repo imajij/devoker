@@ -1,0 +1,4 @@
+NAME                 IMAGE                COMMAND                  SERVICE    CREATED          STATUS                    PORTS
+devoker-backend-1    devoker-backend      "sh -c 'alembic upgr…"   backend    14 seconds ago   Up 10 seconds             8000/tcp
+devoker-frontend-1   devoker-frontend     "/docker-entrypoint.…"   frontend   14 seconds ago   Up 10 seconds             0.0.0.0:3000->8080/tcp, [::]:3000->8080/tcp
+devoker-postgres-1   postgres:16-alpine   "docker-entrypoint.s…"   postgres   14 seconds ago   Up 13 seconds (healthy)   5432/tcp

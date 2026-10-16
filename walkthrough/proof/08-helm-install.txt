@@ -1,0 +1,4 @@
+Release "devoker" does not exist. Installing it now.
+Error: resource Deployment/devoker-staging/backend not ready. status: InProgress, message: Available: 0/2
+resource Deployment/devoker-staging/postgres not ready. status: InProgress, message: Available: 0/1
+context deadline exceeded

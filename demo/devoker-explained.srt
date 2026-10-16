@@ -1,0 +1,311 @@
+1
+00:00:00,000 --> 00:00:00,476
+Welcome.
+
+2
+00:00:00,476 --> 00:00:04,933
+This is Devoker, a multiplayer Texas Hold'em game for playing with friends.
+
+3
+00:00:04,933 --> 00:00:21,932
+The game itself is small, but it's delivered the way a production service would be: containerised, deployed to Kubernetes with Helm, scanned for security issues in CI, rolled out by Argo CD through GitOps, monitored with Prometheus and Grafana, and backed by Terraform for the AWS side.
+
+4
+00:00:21,932 --> 00:00:29,422
+In the next few minutes I'll walk through what it does, how it's built, and show every layer actually running on this machine.
+
+5
+00:00:30,122 --> 00:00:31,737
+Let's start with the product.
+
+6
+00:00:31,737 --> 00:00:36,361
+A player enters a name and hosts a table, which gives them a five-letter room code.
+
+7
+00:00:36,361 --> 00:00:38,980
+A friend enters the same code and asks to join.
+
+8
+00:00:38,980 --> 00:00:42,991
+The host sees the request appear instantly, and approves or declines it.
+
+9
+00:00:42,991 --> 00:00:45,776
+Nobody sits at your table without your permission.
+
+10
+00:00:46,476 --> 00:00:49,623
+Here's a hand in progress from two different browsers.
+
+11
+00:00:49,623 --> 00:00:52,654
+On the left is Alice, the host; on the right is Bob.
+
+12
+00:00:52,654 --> 00:00:58,132
+Blinds have been posted, the pot is thirty, and each player can see only their own hole cards.
+
+13
+00:00:58,132 --> 00:01:05,126
+The server builds a separate view of the table for each player's secret token, so cards never leak to the wrong browser.
+
+14
+00:01:05,126 --> 00:01:08,856
+Alice has the action, with fold, call, raise and all-in buttons.
+
+15
+00:01:09,556 --> 00:01:13,095
+After the flop, turn and river, the hand goes to showdown.
+
+16
+00:01:13,095 --> 00:01:20,781
+The server evaluates both hands, Bob wins forty chips with one pair, and the result is recorded in PostgreSQL as hand history.
+
+17
+00:01:20,781 --> 00:01:25,540
+Both screens update live through Server-Sent Events, without any page refresh.
+
+18
+00:01:26,240 --> 00:01:27,738
+Here's the architecture.
+
+19
+00:01:27,738 --> 00:01:30,111
+A browser hits the Kubernetes Ingress.
+
+20
+00:01:30,111 --> 00:01:35,917
+Slash goes to the React frontend served by nginx, which autoscales between two and five pods.
+
+21
+00:01:35,917 --> 00:01:41,973
+Slash A P I goes to the FastAPI backend, running two replicas, and all state lives in PostgreSQL.
+
+22
+00:01:41,973 --> 00:01:55,895
+Along the bottom is the delivery path: a git push triggers GitHub Actions, which tests, scans and builds the images, pushes them to the GitHub container registry, and then commits the new image tag back into the Helm chart.
+
+23
+00:01:55,895 --> 00:02:00,390
+Argo CD, running inside the cluster, notices that commit and deploys it.
+
+24
+00:02:00,390 --> 00:02:08,194
+Prometheus scrapes the backend's metrics, Grafana visualises them, and Terraform describes the equivalent AWS infrastructure.
+
+25
+00:02:08,894 --> 00:02:11,943
+The key backend decision is that the API is stateless.
+
+26
+00:02:11,943 --> 00:02:17,477
+The first version kept games in memory, which meant only one replica and downtime on every deploy.
+
+27
+00:02:17,477 --> 00:02:22,559
+Now every room is a single Postgres row containing the table as JSON and a version number.
+
+28
+00:02:22,559 --> 00:02:32,045
+Every change, like a bet or a fold, happens inside this locked helper, which takes a row lock with select for update, applies the change, bumps the version and commits.
+
+29
+00:02:32,045 --> 00:02:37,014
+So two players acting at the same moment on different replicas simply queue on the lock.
+
+30
+00:02:37,014 --> 00:02:44,862
+Each player's event stream watches the version column and pushes a fresh view whenever it changes, no matter which replica made the change.
+
+31
+00:02:45,562 --> 00:02:46,295
+Next, tests.
+
+32
+00:02:46,295 --> 00:02:56,430
+The project shipped with thirty-four pytest tests covering the poker rules, hand rankings, and every API endpoint, and I added two more for a bug I'll show you later.
+
+33
+00:02:56,430 --> 00:03:05,527
+The test fixture builds a throwaway SQLite database by running the real Alembic migrations, so the schema under test is exactly what production gets.
+
+34
+00:03:05,527 --> 00:03:08,824
+Here they are, all thirty-six passing on this machine.
+
+35
+00:03:09,524 --> 00:03:12,552
+For containers, both images use multi-stage builds.
+
+36
+00:03:12,552 --> 00:03:19,734
+The backend installs its dependencies in a build stage and copies only the virtual environment into a slim runtime image.
+
+37
+00:03:19,734 --> 00:03:25,611
+The frontend is compiled with Node, and only the static files ship, in an unprivileged nginx image.
+
+38
+00:03:25,611 --> 00:03:30,716
+Both run as numeric, non-root users, which Kubernetes needs to verify run as non root.
+
+39
+00:03:30,716 --> 00:03:37,424
+Docker Compose brings up Postgres, the backend and the frontend, and the backend waits until Postgres is healthy.
+
+40
+00:03:37,424 --> 00:03:42,707
+The smoke script then plays a complete hand through the API, and here it reports success.
+
+41
+00:03:43,407 --> 00:03:44,333
+Now Kubernetes.
+
+42
+00:03:44,333 --> 00:04:03,280
+Everything is packaged as one Helm chart: deployments for the backend, frontend and Postgres, cluster IP services, an Ingress, a horizontal pod autoscaler, persistent volumes, a config map for blinds and starting chips, and a secret for the database password that's created with kubectl and never committed.
+
+43
+00:04:03,280 --> 00:04:09,884
+Here are the running pods: two backend replicas, two frontend pods managed by the autoscaler, and Postgres.
+
+44
+00:04:09,884 --> 00:04:16,056
+Every container drops all Linux capabilities and runs as non-root with a read-only root file system.
+
+45
+00:04:16,056 --> 00:04:21,610
+An init container waits for Postgres, so the backend never crash-loops on a fresh install.
+
+46
+00:04:22,310 --> 00:04:26,878
+And here's the same game served through the ingress controller at devoker dot localhost.
+
+47
+00:04:26,878 --> 00:04:35,391
+The Ingress routes slash A P I to the backend and everything else to the frontend, with buffering turned off and a long read timeout so the event streams stay open.
+
+48
+00:04:36,091 --> 00:04:38,423
+Delivery is handled by GitHub Actions.
+
+49
+00:04:38,423 --> 00:04:56,403
+On every push, the pipeline runs the tests and a production frontend build, then four kinds of security scanning: bandit for static analysis, pip audit, npm audit and Trivy for vulnerable dependencies and Kubernetes misconfigurations, and Gitleaks to catch secrets anywhere in the git history.
+
+50
+00:04:56,403 --> 00:05:02,785
+Only when all of that passes are the images built, for both amd64 and arm64, and scanned again by Trivy.
+
+51
+00:05:02,785 --> 00:05:06,529
+Any fixable high or critical vulnerability stops the release.
+
+52
+00:05:06,529 --> 00:05:15,304
+Images that pass are pushed to the GitHub container registry, tagged with the commit SHA, and a bot commits that tag into the Helm values file.
+
+53
+00:05:16,004 --> 00:05:18,266
+That commit is where GitOps takes over.
+
+54
+00:05:18,266 --> 00:05:22,731
+Argo CD runs inside the cluster and watches the Helm chart in the repository.
+
+55
+00:05:22,731 --> 00:05:27,370
+When the image tag changes, it renders the chart and syncs the cluster to match.
+
+56
+00:05:27,370 --> 00:05:33,865
+Self-heal is on, so a manual kubectl edit gets reverted, and prune removes anything that git no longer contains.
+
+57
+00:05:33,865 --> 00:05:39,896
+Here it is on this cluster, synced and healthy, pulling the published images straight from the registry.
+
+58
+00:05:40,596 --> 00:05:49,530
+For observability, the backend exposes Prometheus metrics: request rates and latencies, plus custom metrics for hands played and open event streams.
+
+59
+00:05:49,530 --> 00:05:58,041
+The kube Prometheus stack is installed with Helm, and a ServiceMonitor in the Devoker chart tells Prometheus to scrape both backend replicas.
+
+60
+00:05:58,041 --> 00:06:06,975
+The chart also ships a Grafana dashboard, and two alert rules: one for backend restarts, and one for the frontend autoscaler sitting at its maximum.
+
+61
+00:06:07,675 --> 00:06:09,459
+Monitoring paid off right away.
+
+62
+00:06:09,459 --> 00:06:16,366
+When I pushed a burst of twenty-five games through the Ingress, about a third of the requests failed with five oh three.
+
+63
+00:06:16,366 --> 00:06:22,179
+On the dashboard you can see why: p95 latency jumps to one second and fifteen event streams are open.
+
+64
+00:06:22,179 --> 00:06:24,481
+The cause was the event stream endpoint.
+
+65
+00:06:24,481 --> 00:06:31,791
+It took its database session through FastAPI's dependency injection, and FastAPI keeps that session open until the stream ends.
+
+66
+00:06:31,791 --> 00:06:35,935
+So every connected player held a pooled connection, idle in transaction.
+
+67
+00:06:35,935 --> 00:06:47,849
+Fifteen streams used up the whole pool, the readiness check had to wait for a connection, its one second probe timed out, Kubernetes marked both backends unready, and the Ingress had nowhere to send traffic.
+
+68
+00:06:47,849 --> 00:06:55,216
+The fix is small: the stream checks the player's token with its own short-lived session, just like the polling loop already did.
+
+69
+00:06:55,216 --> 00:07:03,677
+After the fix, the same burst leaves no connections stuck, readiness answers in ten milliseconds, and twenty-five out of twenty-five games succeed.
+
+70
+00:07:03,677 --> 00:07:06,728
+I added a regression test that fails on the old code.
+
+71
+00:07:07,428 --> 00:07:19,549
+Finally, Terraform describes the cloud side: a VPC with two public subnets, an EKS cluster with a small managed node group, E C R repositories with scan on push, and an encrypted S3 bucket.
+
+72
+00:07:19,549 --> 00:07:22,948
+The configuration formats cleanly and validates here.
+
+73
+00:07:22,948 --> 00:07:33,145
+Applying it creates real, billable AWS resources, about fifteen cents an hour, so it's only planned and applied when needed, and destroyed in the same session.
+
+74
+00:07:33,845 --> 00:07:34,496
+To wrap up.
+
+75
+00:07:34,496 --> 00:07:45,439
+The biggest lesson is that the application's state model decides how it can be deployed: moving rooms into Postgres is what made two replicas and zero-downtime rolling updates possible.
+
+76
+00:07:45,439 --> 00:07:53,543
+The security scans found real problems, and load testing against the dashboards found one more, which is now fixed and covered by a test.
+
+77
+00:07:53,543 --> 00:08:01,942
+Everything you've seen here was run on this machine: the tests, Docker Compose, the Helm chart on minikube, Argo CD, and the monitoring stack.
+
+78
+00:08:01,942 --> 00:08:03,125
+Thanks for watching.

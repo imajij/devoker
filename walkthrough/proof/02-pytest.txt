@@ -1,0 +1,47 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.12.14, pytest-9.1.1, pluggy-1.7.0 -- .venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/ajijuttam/projects/devoker/Devoker/backend
+configfile: pytest.ini
+testpaths: tests
+plugins: anyio-4.15.1
+collecting ... collected 36 items
+
+tests/test_api.py::test_health_and_ready PASSED                          [  2%]
+tests/test_api.py::test_create_room_validates_name PASSED                [  5%]
+tests/test_api.py::test_unknown_room_is_404 PASSED                       [  8%]
+tests/test_api.py::test_join_waits_for_host_approval PASSED              [ 11%]
+tests/test_api.py::test_declined_join_is_rejected PASSED                 [ 13%]
+tests/test_api.py::test_cancelled_join_disappears_from_host_list PASSED  [ 16%]
+tests/test_api.py::test_play_a_hand_and_record_it PASSED                 [ 19%]
+tests/test_api.py::test_rebuy_needs_host_approval_except_for_host PASSED [ 22%]
+tests/test_api.py::test_leave_between_hands PASSED                       [ 25%]
+tests/test_api.py::test_only_host_closes_room PASSED                     [ 27%]
+tests/test_api.py::test_metrics_endpoint PASSED                          [ 30%]
+tests/test_api.py::test_events_rejects_unknown_token_and_missing_room PASSED [ 33%]
+tests/test_api.py::test_events_holds_no_request_scoped_db_session PASSED [ 36%]
+tests/test_evaluate.py::test_evaluate[Ah Kh Qh Jh Th 2c 3d-10-kickers0] PASSED [ 38%]
+tests/test_evaluate.py::test_evaluate[9h 8h 7h 6h 5h Ah 2c-9-kickers1] PASSED [ 41%]
+tests/test_evaluate.py::test_evaluate[5d 4d 3d 2d Ad Kc Qs-9-kickers2] PASSED [ 44%]
+tests/test_evaluate.py::test_evaluate[9c 9d 9h 9s 2c 2d Ah-8-kickers3] PASSED [ 47%]
+tests/test_evaluate.py::test_evaluate[Kc Kd Kh 5s 5c 5d 2h-7-kickers4] PASSED [ 50%]
+tests/test_evaluate.py::test_evaluate[Ah Jh 8h 6h 3h 2h Kc-6-kickers5] PASSED [ 52%]
+tests/test_evaluate.py::test_evaluate[Ah Kd Qc Js Th 9h 2h-5-kickers6] PASSED [ 55%]
+tests/test_evaluate.py::test_evaluate[Ac 2d 3h 4s 5c 9d Kh-5-kickers7] PASSED [ 58%]
+tests/test_evaluate.py::test_evaluate[7c 7d 7h As 9c 4d 2h-4-kickers8] PASSED [ 61%]
+tests/test_evaluate.py::test_evaluate[Kc Kd 9h 9s 4c 4d 2h-3-kickers9] PASSED [ 63%]
+tests/test_evaluate.py::test_evaluate[Jc Jd Ah 8s 6c 4d 2h-2-kickers10] PASSED [ 66%]
+tests/test_evaluate.py::test_evaluate[Ac Qd 9h 7s 5c 3d 2h-1-kickers11] PASSED [ 69%]
+tests/test_evaluate.py::test_evaluate[Qc Kd Ah 2s 3c-1-kickers12] PASSED [ 72%]
+tests/test_evaluate.py::test_compare PASSED                              [ 75%]
+tests/test_evaluate.py::test_card_string PASSED                          [ 77%]
+tests/test_evaluate.py::test_shuffled_deck_has_every_card_once PASSED    [ 80%]
+tests/test_table.py::test_heads_up_fold PASSED                           [ 83%]
+tests/test_table.py::test_showdown PASSED                                [ 86%]
+tests/test_table.py::test_side_pot PASSED                                [ 88%]
+tests/test_table.py::test_random_hands_keep_chips PASSED                 [ 91%]
+tests/test_table.py::test_rebuy PASSED                                   [ 94%]
+tests/test_table.py::test_round_trips_through_json_mid_hand PASSED       [ 97%]
+tests/test_table.py::test_view_hides_other_hole_cards PASSED             [100%]
+
+============================== 36 passed in 0.12s ==============================

@@ -1,0 +1,8 @@
+devoker_hands_played_total 1.0
+devoker_hands_played_created 1.7921732963932e+09
+devoker_open_event_streams 2.0
+http_requests_total{handler="/ready",method="GET",status="2xx"} 17.0
+http_requests_total{handler="/health",method="GET",status="2xx"} 8.0
+http_requests_total{handler="/api/rooms",method="POST",status="2xx"} 1.0
+http_requests_total{handler="/api/rooms/{code}/join",method="POST",status="2xx"} 1.0
+http_requests_total{handler="/api/rooms/{code}/requests/{request_id}",method="PUT",status="2xx"} 1.0

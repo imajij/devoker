@@ -1,0 +1,3 @@
+NAME   	NAMESPACE      	REVISION	UPDATED                             	STATUS  	CHART                        	APP VERSION
+devoker	devoker-staging	2       	2026-10-16 23:25:00.600005 +0530 IST	deployed	devoker-0.1.0                	0.1.0      
+mon    	monitoring     	2       	2026-10-16 23:24:38.276965 +0530 IST	deployed	kube-prometheus-stack-92.10.0	v0.94.1    

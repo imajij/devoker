@@ -1,0 +1,21 @@
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/backend-6b5b5dccc-kdvsw    1/1     Running   0          63s
+pod/backend-6b5b5dccc-m644s    1/1     Running   0          63s
+pod/frontend-7d7f56b5c-824cs   1/1     Running   0          63s
+pod/frontend-7d7f56b5c-p7nh7   1/1     Running   0          63s
+pod/postgres-b8d979f-xf798     1/1     Running   0          63s
+
+NAME               TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/backend    ClusterIP   10.105.222.149   <none>        8000/TCP   63s
+service/frontend   ClusterIP   10.102.144.47    <none>        80/TCP     63s
+service/postgres   ClusterIP   10.100.170.3     <none>        5432/TCP   63s
+
+NAME                                CLASS   HOSTS               ADDRESS        PORTS   AGE
+ingress.networking.k8s.io/devoker   nginx   devoker.localhost   192.168.49.2   80      63s
+
+NAME                                           REFERENCE             TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/frontend   Deployment/frontend   cpu: 5%/50%   2         5         2          63s
+
+NAME                                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+persistentvolumeclaim/frontend-logs   Bound    pvc-4d079944-3c6a-4cc1-b3f9-d9daedff339f   1Gi        RWO            standard       <unset>                 63s
+persistentvolumeclaim/postgres-data   Bound    pvc-d421d45e-a03b-4d6d-8ce4-81644a95218d   1Gi        RWO            standard       <unset>                 63s

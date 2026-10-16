@@ -1,0 +1,15 @@
+$ # BEFORE: 20 concurrent games, original
+$ psql: pg_stat_activity by state
+ 1 | active
+15 | idle in transaction   <- pool pinned
+$ curl /ready
+TimeoutError: timed out   <- probe fails
+
+$ # AFTER: same burst, fixed backend
+$ psql: pg_stat_activity by state
+ 1 | active
+ 5 | idle
+$ curl /ready
+ready took 0.010s
+$ smoke x25 via Ingress: 25/25 ok
+$ pytest: 36 passed

@@ -213,7 +213,7 @@ helm rollback devoker <revision> -n devoker
            └─ secrets        gitleaks over the full history
                                         │ all five must pass
                      build-scan-push   matrix: backend, frontend
-                       docker build → trivy image gate → push ghcr.io/okpoorav/devoker-*:<sha> (amd64 + arm64)
+                       docker build → trivy image gate → push ghcr.io/imajij/devoker-*:<sha> (amd64 + arm64)
                                         │ main only
                      deploy            yq sets both tags in helm/devoker/values.yaml → commit → push
 ```
@@ -227,8 +227,8 @@ helm rollback devoker <revision> -n devoker
 - **Permissions are least-privilege per job.** Only build gets `packages: write`; only deploy gets `contents: write`.
 - **The deploy commit doesn't loop.** It includes `[skip ci]`, and the trigger ignores `helm/devoker/values.yaml`.
 - **A `concurrency` group** stops two pushes racing to commit tags.
-- **The image registry is hard-coded lowercase** (`ghcr.io/okpoorav`). Image names must be lowercase,
-  and the GitHub owner is `OKpoorav`.
+- **The image registry is hard-coded lowercase** (`ghcr.io/imajij`). Image names must be lowercase,
+  and the GitHub owner is `imajij`.
 
 ## DevSecOps
 

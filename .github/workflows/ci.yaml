@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  REGISTRY: ghcr.io/okpoorav # image names must be lowercase; the GitHub owner is OKpoorav
+  REGISTRY: ghcr.io/imajij # image names must be lowercase; the GitHub owner is imajij
   TRIVY: aquasec/trivy:0.75.0
 
 jobs:
@@ -76,7 +76,7 @@ jobs:
       matrix:
         component: [backend, frontend]
     env:
-      IMAGE: ghcr.io/okpoorav/devoker-${{ matrix.component }}:${{ github.sha }}
+      IMAGE: ghcr.io/imajij/devoker-${{ matrix.component }}:${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - name: Build

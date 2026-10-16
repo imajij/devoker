@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/OKpoorav/Devoker.git
+    repoURL: https://github.com/imajij/devoker.git
     targetRevision: main
     path: helm/devoker
   destination:
